@@ -79,6 +79,49 @@
     "exercises": [
         {
             "position": 0,
+            "path": "app",
+            "slug": "app",
+            "translations": {},
+            "language": "python3",
+            "entry": null,
+            "title": "app",
+            "graded": false,
+            "files": [
+                {
+                    "path": "app/__init__.py",
+                    "name": "__init__.py",
+                    "hidden": true
+                },
+                {
+                    "path": "app/config.py",
+                    "name": "config.py",
+                    "hidden": false
+                },
+                {
+                    "path": "app/main.py",
+                    "name": "main.py",
+                    "hidden": false
+                },
+                {
+                    "path": "app/models.py",
+                    "name": "models.py",
+                    "hidden": false
+                },
+                {
+                    "path": "app/routes.py",
+                    "name": "routes.py",
+                    "hidden": false
+                },
+                {
+                    "path": "app/storage.py",
+                    "name": "storage.py",
+                    "hidden": false
+                }
+            ],
+            "done": false
+        },
+        {
+            "position": 1,
             "path": "frontend",
             "slug": "frontend",
             "translations": {},
@@ -131,7 +174,7 @@
             "done": false
         },
         {
-            "position": 1,
+            "position": 2,
             "path": "src",
             "slug": "src",
             "translations": {},
@@ -162,5 +205,5 @@
     "bugsLink": null,
     "videoSolutions": false,
     "localhostOnly": false,
-    "session": 8316332489899099000
+    "session": 7867324692787066000
 }

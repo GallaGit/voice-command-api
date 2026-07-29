@@ -260,23 +260,338 @@ El objetivo principal es comprender:
 
 La complejidad arquitectónica se añadirá en proyectos futuros.
 
+## Fase 3 — Primera API funcional
+
+Durante esta fase se comenzó la construcción del backend siguiendo una arquitectura modular. El objetivo fue comprender la responsabilidad de cada archivo antes de implementar toda la lógica de negocio.
+
 ---
 
-## Estado actual
+## Creación de la aplicación FastAPI
 
-Completado:
+En `main.py` se creó la aplicación principal.
 
-✅ Entorno virtual configurado.  
-✅ Dependencias instaladas mediante UV.  
-✅ Variables de entorno preparadas.  
-✅ Git configurado para proteger archivos sensibles.  
-✅ Estructura inicial del backend creada.
+Responsabilidades de este archivo:
 
-Pendiente:
+- Crear la instancia de FastAPI.
+- Configurar la aplicación.
+- Registrar los routers.
+- Iniciar la API.
 
-⬜ Crear la aplicación FastAPI.  
-⬜ Configurar CORS.  
-⬜ Crear modelos de datos.  
-⬜ Crear endpoints CRUD de tareas.  
-⬜ Integrar Groq en `/instruction`.  
-⬜ Probar flujo completo voz → IA → acción.
+Se añadió un endpoint de prueba:
+
+```text
+GET /
+```
+
+Su única finalidad es verificar que el servidor funciona correctamente.
+
+Respuesta:
+
+```json
+{
+    "message": "Voice Command API running"
+}
+```
+
+---
+
+## Ejecución del servidor
+
+La aplicación se ejecuta mediante Uvicorn utilizando UV:
+
+```bash
+uv run uvicorn app.main:app --reload
+```
+
+Desglose del comando:
+
+- `uv run` ejecuta el comando dentro del entorno administrado por UV.
+- `uvicorn` inicia el servidor ASGI.
+- `app.main:app` indica dónde se encuentra la aplicación.
+- `--reload` reinicia automáticamente el servidor cuando se detectan cambios en el código.
+
+---
+
+## Documentación automática
+
+FastAPI genera automáticamente una documentación interactiva disponible en:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+Desde esta interfaz es posible:
+
+- visualizar todos los endpoints;
+- probar la API sin utilizar Postman;
+- conocer los modelos de entrada y salida;
+- inspeccionar los códigos de respuesta HTTP.
+
+---
+
+## Configuración de CORS
+
+Se añadió el middleware CORS para permitir que el frontend pueda comunicarse con la API.
+
+Conceptualmente, CORS actúa como una política de seguridad del navegador que controla qué aplicaciones web tienen permiso para realizar peticiones al backend.
+
+El flujo de una petición queda de la siguiente forma:
+
+```text
+Frontend
+    │
+    ▼
+CORS Middleware
+    │
+¿Origen permitido?
+    │
+ ┌──Sí──────────────┐
+ ▼                  ▼
+Endpoint         Navegador bloquea
+```
+
+Durante el desarrollo únicamente se permiten los orígenes necesarios para el frontend local.
+
+---
+
+## Organización mediante Router
+
+Se decidió separar los endpoints de `main.py`.
+
+Se creó:
+
+```text
+routes.py
+```
+
+Responsabilidad:
+
+- contener todos los endpoints de la aplicación.
+
+El router se registra posteriormente desde `main.py`.
+
+Esta separación permite mantener la aplicación organizada y facilita el crecimiento del proyecto.
+
+---
+
+## Almacenamiento temporal
+
+Se creó:
+
+```text
+storage.py
+```
+
+Contiene una lista global:
+
+```python
+tasks = []
+```
+
+Esta lista funciona como un almacén temporal de datos.
+
+No existe persistencia.
+
+Cuando el servidor se reinicia:
+
+```text
+Servidor detenido
+
+↓
+
+tasks desaparece
+
+↓
+
+Servidor iniciado
+
+↓
+
+tasks = []
+```
+
+Este comportamiento es el requerido por la especificación del proyecto.
+
+---
+
+## Primer endpoint del proyecto
+
+Se implementó:
+
+```text
+GET /tasks
+```
+
+Su única responsabilidad es devolver el contenido de la lista `tasks`.
+
+Si no existen tareas, la respuesta correcta es:
+
+```json
+[]
+```
+
+No se considera un error.
+
+Una lista vacía representa que actualmente no existen recursos almacenados.
+
+---
+
+## Modelos de datos (Pydantic)
+
+Se comenzó el diseño de los modelos utilizando Pydantic.
+
+Se comprendió que un mismo recurso puede necesitar distintos modelos dependiendo del contexto.
+
+Ejemplo:
+
+## Modelo de entrada
+
+Representa los datos que envía el cliente.
+
+```text
+POST /tasks
+```
+
+Ejemplo:
+
+```json
+{
+    "title": "Comprar leche"
+}
+```
+
+---
+
+## Modelo de salida
+
+Representa la tarea completa devuelta por la API.
+
+```json
+{
+    "id": 1,
+    "title": "Comprar leche",
+    "done": false
+}
+```
+
+Separar ambos modelos evita que el cliente envíe información que únicamente debe generar el servidor.
+
+---
+
+## Comprensión del flujo Backend
+
+Durante esta sesión se comprendió el flujo básico de comunicación entre frontend y backend.
+
+```text
+Frontend
+
+↓
+
+Petición HTTP
+
+↓
+
+FastAPI
+
+↓
+
+Pydantic valida los datos
+
+↓
+
+Endpoint
+
+↓
+
+Almacenamiento (tasks)
+
+↓
+
+Respuesta JSON
+
+↓
+
+Frontend
+```
+
+Este patrón será el mismo para todos los endpoints del proyecto.
+
+Únicamente cambiará la lógica ejecutada por cada uno.
+
+---
+
+## Patrón general de los endpoints
+
+Todos los endpoints siguen la misma estructura:
+
+```text
+Recibir petición
+
+↓
+
+Validar datos (Pydantic)
+
+↓
+
+Ejecutar lógica
+
+↓
+
+Responder con JSON
+```
+
+Lo que cambia entre un endpoint y otro es la operación realizada sobre los datos.
+
+| Endpoint | Acción |
+| ---------- | -------- |
+| GET | Consultar datos |
+| POST | Crear datos |
+| PUT | Reemplazar un recurso completo |
+| PATCH | Modificar parcialmente un recurso |
+| DELETE | Eliminar un recurso |
+
+---
+
+## Conceptos aprendidos
+
+- Arquitectura básica de un proyecto FastAPI.
+- Diferencia entre aplicación (`FastAPI`) y router (`APIRouter`).
+- Función del middleware CORS.
+- Qué es un endpoint.
+- Qué es un modelo de datos.
+- Función de Pydantic.
+- Diferencia entre modelos de entrada y salida.
+- Almacenamiento temporal en memoria.
+- Flujo completo entre frontend y backend.
+
+---
+
+## Estado del proyecto
+
+### Completado
+
+- ✅ Entorno virtual configurado.
+- ✅ Dependencias instaladas con UV.
+- ✅ Variables de entorno preparadas (`.env` / `.env.example`).
+- ✅ Git configurado para proteger archivos sensibles (`.gitignore`).
+- ✅ Estructura inicial del backend (`app/`).
+- ✅ Aplicación FastAPI creada (`main.py`).
+- ✅ Endpoint de prueba `GET /`.
+- ✅ Documentación automática (`/docs`).
+- ✅ CORS configurado para el frontend local.
+- ✅ Router creado y registrado (`routes.py` → `main.py`).
+- ✅ Almacenamiento temporal en memoria (`storage.py` → `tasks = []`).
+- ✅ Endpoint `GET /tasks`.
+- ✅ Diseño inicial de modelos Pydantic (`TaskCreate`, `Task`).
+
+### Pendiente
+
+- ⬜ Completar `POST /tasks` (ahora está iniciado, pero sin lógica).
+- ⬜ Generar IDs únicos e incrementales.
+- ⬜ Implementar `PUT /tasks/{task_id}`.
+- ⬜ Implementar `PATCH /tasks/{task_id}`.
+- ⬜ Implementar `DELETE /tasks/{task_id}`.
+- ⬜ Leer configuración desde `.env` en `config.py`.
+- ⬜ Integrar Groq en `POST /instruction`.
+- ⬜ Implementar `POST /transcribe`.
+- ⬜ Probar flujo completo voz → IA → acción (frontend + backend).
