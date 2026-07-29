@@ -7,25 +7,33 @@ from groq import Groq
 from src.app.core.config import get_settings
 from src.app.schemas.voice import InstructionPayload
 
-_SYSTEM_PROMPT = """You are a routing engine for a voice-controlled to-do API.
-Given a user transcription, respond with ONLY a valid JSON object (no markdown, no prose) in this exact shape:
-{"endpoint":"/tasks","method":"GET|POST|PUT|PATCH|DELETE","params":{}}
+# Matches README / academy routing contract: endpoint + method + params only.
+_SYSTEM_PROMPT = """You convert a user voice transcription into API routing JSON for a to-do list.
+
+Reply with ONLY one JSON object. No markdown. No explanations. Exact keys:
+{"endpoint":"...","method":"...","params":{...}}
+
+Allowed routes:
+- List tasks: {"endpoint":"/tasks","method":"GET","params":{}}
+- Create task: {"endpoint":"/tasks","method":"POST","params":{"title":"Buy groceries"}}
+  Optional params.done (boolean, default false).
+- Replace task: {"endpoint":"/tasks/1","method":"PUT","params":{"title":"Buy milk","done":false}}
+- Partial update: {"endpoint":"/tasks/1","method":"PATCH","params":{"done":true}}
+  Or params.title only / both.
+- Delete task: {"endpoint":"/tasks/1","method":"DELETE","params":{}}
 
 Rules:
-- endpoint must be "/tasks" or "/tasks/{id}" where id is an integer when targeting one task.
-- method must be one of: GET, POST, PUT, PATCH, DELETE.
-- For POST /tasks: params must include "title" (string). Optional "done" (boolean, default false).
-- For PUT /tasks/{id}: params must include "title" (string) and "done" (boolean). Put the id in the endpoint path.
-- For PATCH /tasks/{id}: params may include "title" and/or "done". Put the id in the endpoint path.
-- For DELETE /tasks/{id}: params may be {}. Put the id in the endpoint path.
-- For GET /tasks: params may be {}.
-- Infer intent from the user's language (Spanish or English). Never invent free-form text outside the JSON object.
+- method must be GET, POST, PUT, PATCH, or DELETE.
+- Put the numeric task id in the endpoint path as /tasks/{id}. Do not invent ids that were never mentioned.
+- Understand Spanish and English.
+- Never return free-form text outside the JSON object.
 """
 
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 
 def route_transcription(transcription: str) -> InstructionPayload:
+    """Call Groq and return routing JSON only. Does not mutate tasks."""
     settings = get_settings()
     client = Groq(api_key=settings.groq_api_key)
 
@@ -47,7 +55,13 @@ def route_transcription(transcription: str) -> InstructionPayload:
         ) from exc
 
     raw = (completion.choices[0].message.content or "").strip()
-    return _parse_instruction_payload(raw)
+    payload = _parse_instruction_payload(raw)
+    # Normalize method casing for downstream consumers / frontend.
+    return InstructionPayload(
+        endpoint=payload.endpoint.strip(),
+        method=payload.method.upper().strip(),
+        params=payload.params or {},
+    )
 
 
 def _parse_instruction_payload(raw: str) -> InstructionPayload:

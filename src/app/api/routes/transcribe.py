@@ -47,6 +47,7 @@ async def transcribe_and_run_flow(request: Request) -> TranscribeFlowResponse:
             detail="Use multipart/form-data with 'file' or application/json with 'transcription'.",
         )
 
+    # Same routing as POST /instruction, then execute (frontend entrypoint).
     instruction = route_transcription(transcription)
     result = execute_instruction(instruction)
     return TranscribeFlowResponse(

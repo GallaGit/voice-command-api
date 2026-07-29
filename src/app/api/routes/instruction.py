@@ -8,4 +8,5 @@ router = APIRouter(tags=["instruction"])
 
 @router.post("/instruction", response_model=InstructionPayload)
 def route_instruction(payload: InstructionRequest) -> InstructionPayload:
+    # README: return routing JSON only — do not create/update/delete tasks here.
     return route_transcription(payload.transcription)
